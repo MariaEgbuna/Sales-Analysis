@@ -1,203 +1,148 @@
-# Superstore Sales Performance (2014-2019)
-
-### Introduction
-This project involved a comprehensive financial analysis of the Superstore dataset. The primary objective was to investigate the significant decline in sales observed during the final two years of the period.
+# Skincare Sales Data Exploratory Analysis (EDA)
 
 ---
 
-### Tools Used
-* **Excel**: For initial data preparation and cleaning.
-* **PostgreSQL**: For database creation, data loading, and querying.
-* **Power BI**: For data visualizations.
+## Project Overview
+
+This project showcases an Exploratory Data Analysis (EDA) performed on a skincare sales dataset. The main goal was to uncover key insights into sales performance, profitability, customer behavior, and geographical market trends. By leveraging SQL queries, this analysis aims to identify strengths, weaknesses, and potential areas for strategic improvement within the business.
 
 ---
 
-### Project Steps
+## Dataset Description
 
-The following steps were performed to clean the raw data and load it into a PostgreSQL database:
+The dataset, named `Skin_Care Target.csv`, contains transactional sales data. Here are the key columns:
 
-1.  **Data Cleaning & Segmentation:** The raw dataset was processed using **Power Query in Excel** to remove duplicates, standardize data, and split the information into four(4) logical sheets: `orders`, `products`, `customer_addresses`, and `customers`.
-2.  **Database Creation:** A new database named `superstore` was created in **PostgreSQL**.
-3.  **Data Loading:** The four cleaned Excel sheets were loaded as tables into the `superstore` database. The tables were named `orders`, `products`,  `customer_addresses`, and `customers` to reflect their contents.
+* **`order_id`**: Unique identifier for each transaction line item.
+* **`product`**: Name of the product sold.
+* **`category`**: Product category (e.g., 'Body care', 'Make up').
+* **`subcategory`**: More specific product grouping (e.g., 'fragrances', 'Nail care products').
+* **`sales`**: Revenue generated from the transaction.
+* **`profit`**: Profit generated from the transaction.
+* **`quantity`**: Number of units sold.
+* **`discount`**: Discount applied to the transaction line item (numeric, e.g., 0.10 for 10%).
+* **`order_date`**: Date of the order.
+* **`customer_id`**: Unique identifier for the customer.
+* **`segment`**: Customer segment (e.g., 'Consumer', 'Corporate').
+* **`city`, `state`, `country`, `market`**: Geographical information.
 
 ---
 
-### OVERVIEW
+## Tools Used
 
-### Key Metrics:
-* **Total Revenue** - $2,297,201.07
-* **Total Profit** - $286,397.79
-* **Total Cost** - $2,010,803.28
-* **Product Count**  - 1,862
-* **Total Qty Ordered** - 37,873
-* **Total No of Customers Across the Years** - 793
+* **Excel**: For standardizing the data and removing duplicates.
+* **PostgreSQL**: Database system used for storing and querying the data.
 
-#### YEARLY DEVIATION
-```SQL
-WITH yearly_sales AS (
-  -- First, calculate total sales for each year
-  SELECT EXTRACT(YEAR FROM order_date) AS sales_year, SUM(sales) AS total_sales
-  FROM orders AS o
-  GROUP BY sales_year
+---
+### General Metrics
+* Total Revenue (2022-2024): $1,770,778
+* Total Profit (Gross): $318,675
+* Total Net Profit After Discounts: $60,004
+* Total Products Sold: 6,388
+* Total Categories Analyzed: 5
+* Total Subcategories Analyzed: 17
+---
+
+### Key Findings
+
+- **Customer Drop**: The number of unique customers remained stable from 2022 to 2023 but dropped by over 44% in 2024 (from a yearly count). This indicates a significant issue with customer acquisition and retention.
+``` SQL
+-- Customers lost across the years
+WITH yearly_customers AS (
+    SELECT
+        TO_CHAR(st.order_date, 'YYYY') AS years,
+        COUNT(DISTINCT st.customer_id) AS customer_count
+    FROM skincare_target AS st
+    GROUP BY years
 )
-SELECT sales_year, total_sales,
-  -- Use LAG to get the total sales from the previous year
-  LAG(total_sales, 1) OVER (ORDER BY sales_year) AS previous_year_sales,
-  -- Calculate the variance and percentage
-  total_sales - LAG(total_sales, 1) OVER (ORDER BY sales_year) AS sales_variance,
-  ((total_sales - LAG(total_sales, 1) OVER (ORDER BY sales_year)) / LAG(total_sales, 1) OVER (ORDER BY sales_year)) * 100 AS sales_variance_percent
-FROM yearly_sales
-ORDER BY sales_year;
-```
-![YoY Sales Analysis](Images/YoY.png)
-
-* **Growth Phase (2015-2017):** Sales grew steadily and rapidly. In 2015, sales more than doubled, showing a massive 108.48% year-over-year growth. Growth slowed to 51.96% in 2016 and further to 6.04% in 2017, but sales still reached their peak.
-* **Decline Phase (2018-2019):** After 2017, the trend reversed dramatically. Sales saw a substantial drop of -24.32% in 2018. The decline accelerated into 2019, with sales plummeting by -73.05%, reaching their lowest point in the dataset.
-
-#### REGIONAL SALES ACROSS THE YEARS
-``` SQL
 SELECT
-  ca.region,
-  SUM(CASE WHEN EXTRACT(YEAR FROM order_date) = 2014 THEN sales ELSE 0 END) AS sales_2014,
-  SUM(CASE WHEN EXTRACT(YEAR FROM order_date) = 2015 THEN sales ELSE 0 END) AS sales_2015,
-  SUM(CASE WHEN EXTRACT(YEAR FROM order_date) = 2016 THEN sales ELSE 0 END) AS sales_2016,
-  SUM(CASE WHEN EXTRACT(YEAR FROM order_date) = 2017 THEN sales ELSE 0 END) AS sales_2017,
-  SUM(CASE WHEN EXTRACT(YEAR FROM order_date) = 2018 THEN sales ELSE 0 END) AS sales_2018,
-  SUM(CASE WHEN EXTRACT(YEAR FROM order_date) = 2019 THEN sales ELSE 0 END) AS sales_2019
-FROM  orders AS o
-JOIN customer_addresses AS ca
-ON o.customer_id = ca.customer_id
-GROUP BY region;
+    years, customer_count,
+    LAG(customer_count, 1) OVER (ORDER BY years) AS previous_year_customers,
+    customer_count - LAG(customer_count, 1) OVER (ORDER BY years) AS customer_change
+FROM yearly_customers
+ORDER BY years;
 ```
-![Regional Sales Analysis](Images/Region.png)
+![Customer Drop](Images/CustomerDrop.png)
 
-* West: This region was the top performer in 2017 but saw the largest absolute sales drop, with a decrease of over $1,153,000 by 2019.
-* South: This region experienced the most significant percentage decrease, with sales dropping by 73.1% from 2017 to 2019.
-* East: While sales declined, the East region showed the most resilience, with the smallest absolute and percentage drop. Sales in this region only dropped by 5.5% between 2017 and 2018.
-* Central: Sales in the Central region also declined substantially, dropping by 81.8% from 2017 to 2019.
-
-####  TOP 10 CUSTOMER BY TOTAL REVENUE
+- **Profitability Crisis**: Even before the operational halt, the business was facing a severe profitability crisis.
+1. The analysis showed a direct correlation between high discount rates and poor performance across the years.
 ``` SQL
+-- YoY revenue, profit, number of products sold, avg_discount, and net profit afer discounts
 SELECT 
-	c.customer_name,
-	SUM(CASE WHEN EXTRACT(YEAR FROM order_date) = 2014 THEN sales ELSE 0 END) AS sales_2014,
-    SUM(CASE WHEN EXTRACT(YEAR FROM order_date) = 2015 THEN sales ELSE 0 END) AS sales_2015,
-    SUM(CASE WHEN EXTRACT(YEAR FROM order_date) = 2016 THEN sales ELSE 0 END) AS sales_2016,
-	SUM(CASE WHEN EXTRACT(YEAR FROM order_date) = 2017 THEN sales ELSE 0 END) AS sales_2017,
-  	SUM(CASE WHEN EXTRACT(YEAR FROM order_date) = 2018 THEN sales ELSE 0 END) AS sales_2018,
-	SUM(CASE WHEN EXTRACT(YEAR FROM order_date) = 2019 THEN sales ELSE 0 END) AS sales_2019,
-	SUM(sales) AS revenue
-FROM orders AS o 
-JOIN customers AS c 
-ON c.customer_id  = o.customer_id
-GROUP BY c.customer_name
-ORDER BY revenue DESC
+	TO_CHAR(st.order_date, 'YYYY') AS years,
+	SUM(st.sales) AS revenue,
+	SUM(st.profit) AS profit,
+	SUM(st.sales * st.discount_percent) / SUM(st.sales) * 100 AS avg_discount,
+	SUM(st.profit) - SUM(st.sales * st.discount_percent) AS net_profit_after_discount
+FROM skincare_target AS st
+GROUP BY TO_CHAR(st.order_date, 'YYYY')
+ORDER BY TO_CHAR(st.order_date, 'YYYY');
+```
+![Yearly Net Profit](Images/ProfitPerformance.png)
+
+2. Subcategories in Home and Accessories and Hair care were consistently unprofitable.
+``` SQL
+-- Drilling through sub-categories in Home and accesories and hair care category department
+SELECT
+    st.subcategory,
+    SUM(st.sales) AS revenue,
+    SUM(st.profit) AS total_profit,
+    SUM(st.qty) AS qty_sold,
+    SUM(st.sales * st.discount_percent) AS total_discount_amount,
+    SUM(st.profit) - SUM(st.sales * st.discount_percent) AS net_profit_after_discount
+FROM skincare_target AS st
+WHERE st.category = 'Home and Accessories' OR st.subcategory = 'Hair care'
+GROUP BY st.subcategory
+ORDER BY net_profit_after_discount;
+```
+![Subcategories](Images/SubProductCheck.png)  
+
+3.  Key geographic markets like Turkey, Nigeria, and Indonesia were operating at a significant loss due to unsustainable discounting.
+``` SQL
+-- Least profitable countries
+SELECT 
+	st.country, 
+	SUM(st.sales) AS revenue, 
+	SUM(st.profit) AS profit,
+	SUM(st.qty) AS qty_sold,
+	AVG(st.discount_percent) * 100 AS avg_discount_rate_percent,
+	SUM(st.profit) - SUM(st.sales * st.discount_percent) AS net_profit_after_discount
+FROM skincare_target AS st
+GROUP BY st.country
+ORDER BY net_profit_after_discount
 LIMIT 10;
 ```
-![Top 20 Customers and their sales data](Images/Customers.png)
+![Least Profitable Countries](Images/CountryProfit.png)
 
-* **Significant Customer Churn:** Several key customers who had high sales in 2017, such as Sean Miller, Tamara Chand,
-and  Adrian Barton, had little to no sales in the final years of the dataset. This indicates a significant loss of business from the most important clients.
-* **Widespread Decline:** The trend is widespread, affecting most of the top 10 customers. The combined sales from these customers, which were substantial in the years prior, dropped precipitously, mirroring the overall company-wide trend.
-
----
-
-### PROFITABILITY ANALYSIS
-
-### KEY METRICS
-* **Total Profit** - $286,397.79
-* **Gross Profit Margin** - 12.46%
-* **Avg Discount Rate** - 14.04%
-* **Total Net Profit After Discount** - $(-36,184.45)
-
-Discrepancies in core financial indicators reveal that while the company's gross profit margin is healthy, extensive high-volume discounting is negatively impacting the final net profit after discounts.
-```SQL
-SELECT 
-	TO_CHAR (o.order_date, 'YYYY') AS years,
-	(SUM(sales) - SUM(cogs) )/SUM(sales) *100 AS gross_profit_margin,
-	SUM(o.profit) AS total_profit, SUM(o.profit) - SUM(o.sales * o.discount_percent) AS net_profit_after_discount,
-	SUM(o.sales * o.discount_percent) / SUM(o.sales) * 100 AS average_discount_rate
-FROM orders AS o
-GROUP BY TO_CHAR (o.order_date, 'YYYY')
-ORDER BY TO_CHAR (o.order_date, 'YYYY');
+- **Customer Behavior**: Top customers were frequently purchasing these heavily discounted, unprofitable products, meaning the business was losing money on its most valuable customer segment.
+``` SQL
+-- Which product category do the top customers buy the most?
+SELECT st.customer_id, st.segment, st.category, SUM(st.qty) AS total_qty_bought
+FROM skincare_target AS st
+WHERE st.customer_id IN ('SP-20620102', 'KN-1645082', 'EH-1376527')
+GROUP BY st.customer_id, st.segment, st.category
+ORDER BY st.customer_id, total_qty_bought DESC;
 ```
-![Net profits after discount](Images/Net_Profit.png)
-
-I decided to run further queries to find out which product categories have the highest discount rates and are contributing the most to this loss.
-
-### PRODUCT CATEGORY PERFORMANCE METRICS
-```SQL
-SELECT
-	p.category,
-	SUM(o.sales) AS revenue,
-    SUM(o.profit) AS total_profit,
-    SUM(o.sales * o.discount_percent) / SUM(o.sales) * 100 AS average_discount_rate,
-    SUM(o.sales * o.discount_percent) AS total_discount_amount,
-    SUM(o.profit) - SUM(o.sales * o.discount_percent) AS net_profit_after_discount
-FROM orders AS o
-JOIN products AS p
-ON p.product_id = o.product_id
-GROUP BY p.category
-ORDER BY net_profit_after_discount;
-```
-![Breakdown of the profit and discount values by product_category](Images/Products_Check.png)
- 
-**Key Observations 💡**
-* The **Furniture category** is the primary driver of the company's net loss, generating a total profit of $18,451.25.
-* However, the total discount amount applied to this category was a massive $123,516.60.
-* This disparity resulted in a net loss of -$105,065.35 for the furniture category alone.
-* The Technology and Office Supplies categories are both profitable even after considering discounts. The net loss is entirely concentrated in the Furniture category.
-
-### FURNITURE DISCOUNT IMPACT ANALYSIS
-```
-SELECT
-    p.sub_category,
-    SUM(o.profit) AS total_profit,
-    SUM(o.sales * o.discount_percent) AS total_discount_amount,
-    SUM(o.profit) - SUM(o.sales * o.discount_percent) AS net_profit_after_discount
-FROM orders AS o
-JOIN products AS p
-ON p.product_id = o.product_id
-WHERE p.category = 'Furniture'
-GROUP BY p.sub_category
-ORDER BY net_profit_after_discount;
-```
-![Pinpointing the exact source of the losses](Images/Sub_Check.png)
-
-The sub-category results reveal that most of these products were sold at a loss from the start.Tables and Bookcases are the biggest contributors to the losses within the Furniture category.
-
-**Key Observations 🧐**
-* The Tables sub-category has the highest total discount amount ($44,192.26) and a total negative profit of (-$17,725.59)
-* Bookcases also have a negative profit before discounts (-$3,472.56), compounding the problem.
-* Chairs show a profit before discounts ($26,590.15), but the heavy discounts ($49,814.82) turn it into a loss.
-* Only Furnishings is profitable, both before and after discounts.
-
----
+***
+![Top Customers frequent purchases](Images/CustomerPurchase.png)
 
 ### Conclusion
-The company's significant decline in sales and profitability is a result of two major, interconnected issues identified through a deep-dive analysis.
 
-1. Profitability and Product Strategy
-A detailed examination of sales and profit margins revealed that the Furniture category is the primary driver of the company’s net loss. Specifically, the analysis found that:
-* Tables and Bookcases are fundamentally unprofitable products, as they are sold at a loss even before discounts.
-* Chairs are made unprofitable due to an aggressive and unsustainable discounting strategy.
+The business's failure was twofold: a sudden cessation of operations in the second half of 2024, preceded by a severe profitability crisis in the first half of the year. This crisis was driven by a collapsing customer base and a flawed, geographically inconsistent discounting strategy.
 
-2. Widespread Customer Churn
-A separate analysis of customer trends showed a critical loss of business from key customers. This widespread decline, which mirrored the overall company trend, was characterized by:
-* Significant churn among key customers who had high sales in 2017 but had little to no sales in subsequent years.
-* A precipitous drop in combined sales from the top 20 customers between 2017 and 2019.
-* The positive sales trends from a few outlier customers were not enough to offset the overall decline.
-
----
+***
 
 ### Recommendations
 
-1. Product Strategy & Pricing
-* Rethink Pricing for Tables and Bookcases: These products are sold at a loss before discounts. Conduct a full review of their pricing model and costs to determine if they can be made profitable. If not, consider phasing them out.
-* Revise Discounting for Chairs: The current discounting strategy on chairs is unsustainable. I advise implementing a new policy that caps discounts to ensure a minimum profit margin is maintained.
-* Leverage Profitable Products: Identify the profitable sub-categories like Furnishings and develop a strategy to increase sales of these items.
+1.  **Investigate the Operational Halt**: The primary recommendation is to determine the cause of the sudden stop in sales after July 2024.
+2.  **Adjust Pricing Strategy**: If operations were to resume, a complete overhaul of the pricing and discounting strategy would be necessary. This includes eliminating aggressive discounts on unprofitable products, especially in high-loss markets like Turkey and Indonesia.
+3.  **Rebuild Customer Base**: A new strategy would be needed to attract and retain customers, as the business was losing a significant portion of its customer base even before the operational halt.
+    
+### How to Replicate This Analysis
 
-2. Customer Retention & Sales
-* Investigate Customer Churn: Conduct an in-depth analysis or reach out to former high-volume customers to understand why they stopped purchasing. The insights gained can inform a new retention strategy.
-* Implement a Customer Retention Plan: Focus sales efforts on retaining and growing relationships with the most valuable customers. Consider loyalty programs or dedicated account managers for key clients.
-* Study Successful Outliers: Analyze the sales data and engagement patterns of the few customers who showed growth. Replicate the strategies that worked for them to re-engage other declining accounts.
+To run this analysis on your own:
+
+1.  **PostgreSQL Database:** Ensure you have a PostgreSQL database set up.
+2.  **Load Data:** Import your `Skin_Care Target.csv` dataset into a table named `skincare_target` in your PostgreSQL database.
+3.  **Execute Queries:** Use a SQL client (like psql, DBeaver, PgAdmin, or VS Code with a PostgreSQL extension) to connect to your database. Then, execute the SQL queries provided in the [`Skincare_Sales_EDA.sql`](Skincare_Sales_EDA.sql) file.
+
+---
