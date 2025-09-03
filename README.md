@@ -1,4 +1,5 @@
 # Sales Analysis Portfolio
+Each project showcases my ability to clean, analyze, and visualize data to uncover valuable business insights and support data-driven decision-making.
 
 ---
 
