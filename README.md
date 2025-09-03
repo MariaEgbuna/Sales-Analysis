@@ -1,7 +1,5 @@
 # Sales Analysis Portfolio
 
-This repository serves as a portfolio of my work in data analytics, with a focus on sales and business intelligence. Each project showcases my ability to clean, analyze, and visualize data to uncover valuable business insights and support data-driven decision-making.
-
 ---
 
 ### 📊 Projects
