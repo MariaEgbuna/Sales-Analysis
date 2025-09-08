@@ -47,6 +47,8 @@ Here are the main questions explored during this EDA. For detailed answers and i
 
 ![Screenshot](Images/Performance_Analysis.png)
 
+---
+
 ### Regional and Temporal Trends
 * How does the total revenue change across different months?
 * Which region contributes the most to the total sales, and does it align with the highest profitability?
@@ -55,16 +57,15 @@ Here are the main questions explored during this EDA. For detailed answers and i
 
 ![Screenshot](Images/Regional&Temporal_Trends.png)
 
-### Profitability Insights
+---
+
+### Profitability Insights & Product-Specific Analysis
 * Which product category has the highest operating profit across all sales methods?
 * What is the average price for products sold via In-store vs. Outlet methods?
+* What is the average units sold per day for each product category?
 * Which retailers had the lowest profit percentage, and how can this be improved?
 
 ![Screenshot](Images/Profitability_Insights.png)
-
-### Product-Specific Analysis
-* What is the average units sold per day for each product category?
-* How does the performance of Women's Athletic Footwear compare to Women's Street Footwear in terms of sales and profit?
 
 ---
 
